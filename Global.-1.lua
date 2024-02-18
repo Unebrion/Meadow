@@ -18,6 +18,9 @@ local deckTags = {'westDeck', 'middleDeck', 'eastDeck'}
 local firstPlayerMarker = '03f05d'
 local roundTracker = 'f2b0a8'
 
+--testing things
+
+
 local turnIndex = {'T1', 'T2', 'T3', 'halftime', 'T4', 'T5', 'T6'} -- 2-3 players
 local fourPlayerTurnIndex = {{'T1', 'T2', 'T3', 'T4', 'halftime', 'T5', 'T6', 'T7', 'T8'}}
 local twoPlayerBoard = '4d58f6'
@@ -36,14 +39,14 @@ local greenScoringZone = '2515db'
 local purpleScoringZone = '09fd42'
 
 local purplePathTokens = {
-    {guid = '717760', snapPoint = {x = 27.78013, y = 1.588443, z = 26.30198}, rotation = {x = 0.0, y = 90, z = 0.0}}, 
+    {guid = '717760', snapPoint = {x = 27.78013, y = 1.588443, z = 26.30198}, rotation = {x = 0.0, y = 90, z = 0.0}},
     {guid = '3ee73a', snapPoint = {x = 27.78015, y = 1.588443, z = 27.86568}, rotation = {x = 0.0, y = 90, z = 0.0}},
     {guid = 'd8e49c', snapPoint = {x = 27.78015, y = 1.588443, z = 29.4294}, rotation = {x = 0.0, y = 90, z = 0.0}},
     {guid = 'aef26e', snapPoint = {x = 27.78014, y = 1.588443, z = 30.99315}, rotation = {x = 0.0, y = 90, z = 0.0}},
   }
 
 local redPathTokens = {
-    {guid = 'd7e46d', snapPoint = {x = -27.78016, y = 1.588443, z = 32.54876}, rotation = {x = 0.0, y = 270, z = 0.0}}, 
+    {guid = 'd7e46d', snapPoint = {x = -27.78016, y = 1.588443, z = 32.54876}, rotation = {x = 0.0, y = 270, z = 0.0}},
     {guid = '6e0905', snapPoint = {x = -27.78016, y = 1.588443, z = 30.98509}, rotation = {x = 0.0, y = 270, z = 0.0}},
     {guid = '8074e0', snapPoint = {x = -27.78016, y = 1.588443, z = 29.42134}, rotation = {x = 0.0, y = 270, z = 0.0}},
     {guid = '68f5e1', snapPoint = {x = -27.78015, y = 1.588443, z = 27.85762}, rotation = {x = 0.0, y = 270, z = 0.0}},

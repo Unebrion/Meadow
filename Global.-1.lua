@@ -2,15 +2,17 @@ turnCounter = 0
 roundCounter = 3
 
 local tableTop = '4ee1f2'
-local gameBoard = 'c01d03'
+local gameBoard = 'c01d03' -- main game board
 
-local goalBagGUID = 'a7e97b'
+local goalBagGUID = 'a7e97b' -- bag with goal tokens
 
 local spareDeckCube = 'd12877' -- Sunk into the table 
 local southDeckCubeMidgame = '474d06' -- Sunk into table
 local campSnapCube = 'd237ef' -- Sunk into table
-local halftimeShowCube = '54ec5b'
-local startButtonCubeBlue = '18c30d'
+local halftimeShowCube = '54ec5b' -- sunk into table
+local startButtonCubeBlue = '18c30d' -- sunk into table
+local scoreButtonBlock = '80959c'-- holds a score calc button. block is sunk into table
+local scorebuttonblock2 = '226dac' -- holds a score calc button. block is sunk into table
 
 local cardTags = {"West", "North", "South", "East"} 
 local deckTags = {'westDeck', 'middleDeck', 'eastDeck'}
@@ -19,7 +21,7 @@ local firstPlayerMarker = '03f05d'
 local roundTracker = 'f2b0a8'
 
 local turnIndex = {'T1', 'T2', 'T3', 'halftime', 'T4', 'T5', 'T6'} -- 2-3 players
-local fourPlayerTurnIndex = {{'T1', 'T2', 'T3', 'T4', 'halftime', 'T5', 'T6', 'T7', 'T8'}}
+local fourPlayerTurnIndex = {'T1', 'T2', 'T3', 'T4', 'halftime', 'T5', 'T6', 'T7', 'T8'}
 
 local setupItems = {
     ["Red"] = {'7c9f52', '6c271c', 'c1452d', '34ec84', '1cef75', 'd7e46d', '6e0905', 'a96f81', '8074e0', '68f5e1', '79a08a', '8e0f7b'},
@@ -32,6 +34,13 @@ local campBoardBag = 'd81846'
 local twoPlayerCampBoard = '84346f'
 local threePlayerCampBoard = '1ff4ec'
 local fourPlayerCampBoard = '32da80'
+
+local scoringZones = {
+    ["Red"] = '8e0f7b',
+    ["Yellow"] = 'afbbaa',
+    ["Green"] = '2515db',
+    ["Purple"] = '09fd42',
+}
 
 local redScoringZone = '8e0f7b'
 local yellowScoringZone = 'afbbaa'
@@ -80,14 +89,15 @@ end
 
 function onLoad()
     setupGameButton()
+    scoreButton()
     local purpleBoard = getObjectFromGUID('59d57e')
     local redBoard = getObjectFromGUID('79a08a')
     local greenBoard = getObjectFromGUID('86ba44')
     local yellowBoard = getObjectFromGUID('381f5f')
-    -- purpleBoard.interactable = false -- purple cube
-    -- redBoard.interactable = false -- red cube
-    -- greenBoard.interactable = false -- green cube
-    -- yellowBoard.interactable = false -- yellow cube
+    purpleBoard.interactable = false -- purple cube
+    redBoard.interactable = false -- red cube
+    greenBoard.interactable = false -- green cube
+    yellowBoard.interactable = false -- yellow cube
 end
 
 function onPlayerTurn(player, previous_player)
@@ -111,15 +121,35 @@ function setupGameButton()
     local buttonHolderCube = getObjectFromGUID(startButtonCubeBlue)
     local setupButton = {click_function = "gameSetup", 
                         function_owner = self, 
-                        label = "Set Up A " .. #Player.getPlayers() .. " Player Game", 
+                        label = "Set Up A \n" .. #Player.getPlayers() .. " Player Game", 
                         position = {0, 1, 0}, 
                         rotation = {0, 180, 0}, 
                         scale = {0.5, 0.5, 0.5}, 
                         width = 5000, 
                         height = 3000, 
-                        font_size = 400, 
+                        font_size = 600, 
                         tooltip = "Set Up Game"}
     buttonHolderCube.createButton(setupButton)
+end
+
+function scoreButton()
+    local buttonHolderCube = getObjectFromGUID(scoreButtonBlock)
+    local buttonHolderCube2 = getObjectFromGUID(scorebuttonblock2)
+
+    local setupButton = {click_function = "scoreCalc", 
+                        function_owner = self, 
+                        label = "Print Scores", 
+                        position = {0, 1, 0}, 
+                        rotation = {0, 180, 0}, 
+                        scale = {0.5, 0.5, 0.5}, 
+                        width = 5000,
+                        height = 3000,
+                        color = {r=27/255,g=125/255,b=57/255},
+                        font_color = {r=1, g=1, b=1},
+                        font_size = 600,
+                        tooltip = "Prints all players current scores to chat"}
+    buttonHolderCube.createButton(setupButton)
+    buttonHolderCube2.createButton(setupButton)
 end
 
 function setupCampBoard()
@@ -220,10 +250,6 @@ function halftimeShowButton()
                         font_size = 5000, 
                         tooltip = "Click this to swap S and N decks and refresh middle"}
     buttonHolderCube.createButton(halftimeShow)
-
-    halftimeTruth = Turns.order
-
-
 end
 
 function halftimeShow()
@@ -275,13 +301,46 @@ function halftimeShow()
     end
 
     -- Places north cards on the empty spaces
-    --Wait.frames(function () restock() end, 100)
+    Wait.frames(function () restock() end, 50)
     returnPathTiles()
     roundCounter = roundCounter + 1
     moveTracker()
     Turns.turn_color = Turns.order[1]
     turnCounter = 1
     
+end
+
+function scoreCalc()
+    local players = Player.getPlayers()
+    local colorsInUse = {}
+    
+    -- Determine colors chosen by players
+    for _, player in ipairs(players) do
+        local color = player.color
+        colorsInUse[color] = player.steam_name
+    end
+
+    for color, zoneGUID in pairs(scoringZones) do
+        if colorsInUse[color] then
+            local playerName = colorsInUse[color]
+            playerScore = 0
+            playerZone = getObjectFromGUID(zoneGUID)
+            if playerZone ~= nil then
+                allCards = playerZone.getObjects()
+                for _, thing in ipairs(allCards) do 
+                    if thing.tag == 'Card' then
+                        local cardPointValue = tonumber(thing.getGMNotes())
+                        if cardPointValue ~= nil then
+                            playerScore = playerScore + cardPointValue
+                        end
+                    end
+                end
+                printToAll(playerName .. " has " .. playerScore .. " points", {1, 1, 1})
+            else
+                printToAll("Zone for " .. playerName .. " not found", {1, 0, 0})
+            end
+        end
+    end
 end
 
 function returnPathTiles()
@@ -386,37 +445,20 @@ end
 
 function moveTracker()
     local trackerPawn = getObjectFromGUID(roundTracker)
-    local campBoard = nil 
-    local campBoardSnaps = nil
-    local campBoardCube = getObjectFromGUID(campSnapCube) -- cube under table with snap point
-
-    local hitlist = Physics.cast({
-        origin = (Vector(campBoardCube.getPosition()) + Vector(0, -2, 0)),
-        direction = {0, 1, 0}, 
-        max_distance = 4,
-        type = 1, -- Ray
-        debug = true,
-    })
-
-    -- Find the camp board and its snap points
-    for _, thing in pairs(hitlist) do 
-        if thing.hit_object.hasTag('campBoard') then
-            campBoard = thing.hit_object
-            campBoardSnaps = campBoard.getSnapPoints()
-            break
-        end
-    end
+    local campBoardCubeObj = getObjectFromGUID(campSnapCube) -- cube under table with snap point
+    local campBoardPos = campBoardCubeObj.getPosition() + Vector(0, 2, 0)
+    local campBoardObj = castAndCheckForTag(campBoardPos, 'campBoard')
+    local snappies = campBoardObj.getSnapPoints()
 
     -- If campBoard and its snap points are found, proceed to move the trackerPawn
-    if campBoard and campBoardSnaps then 
-
+    if campBoardObj and snappies then
         -- 2 - 3 players 
         if #getSeatedPlayers() < 4 then
             local targetTag = turnIndex[roundCounter]
-            for _, snap in pairs(campBoardSnaps) do 
-                for _, tag in pairs(snap.tags) do 
+            for _, snap in pairs(snappies) do 
+                for _, tag in pairs(snap.tags) do
                     if tag == targetTag then
-                        local newPosition = campBoard.positionToWorld(snap.position) + Vector(0, 2, 0)
+                        local newPosition = campBoardObj.positionToWorld(snap.position) + Vector(0, 2, 0)
                         trackerPawn.setPositionSmooth(newPosition)
                         if tag == 'halftime' then
                             halftimeShowButton()
@@ -428,10 +470,10 @@ function moveTracker()
             -- 4 players fourPlayerTurnIndex
         elseif #getSeatedPlayers() == 1 then
             local targetTag = fourPlayerTurnIndex[roundCounter]
-            for _, snap in pairs(campBoardSnaps) do 
+            for _, snap in pairs(snappies) do 
                 for _, tag in pairs(snap.tags) do 
                     if tag == targetTag then
-                        local newPosition = campBoard.positionToWorld(snap.position) + Vector(0, 2, 0)
+                        local newPosition = campBoardObj.positionToWorld(snap.position) + Vector(0, 2, 0)
                         trackerPawn.setPositionSmooth(newPosition)
                         if tag == 'halftime' then
                             halftimeShowButton()
@@ -542,12 +584,6 @@ function simplifiedSetup()
         southDeck.deal(2)
         eastDeck.deal(1)
     end
-
-end
-
-function removeButton()
-    local button = getObjectFromGUID(tableTop)
-    if button then button.destruct() end
 
 end
 
@@ -699,7 +735,7 @@ function onScriptingButtonDown(index, player_color)
     end
 
     if index == 3 then
-        roundTrackerSetup()
+        scoreCalc()
     end
 
     if index == 4 then
@@ -717,9 +753,16 @@ function onScriptingButtonDown(index, player_color)
          end
     end
 
-    if index == 5 then
-        print(turnCounter)
-    end
+    -- if index == 5 then
+    --     local sourceObj = Player[player_color].getHoverObject()
+    --     if sourceObj.type == 'Deck' then
+    --       local objPos = sourceObj.getPosition()
+    --        for _, card in ipairs(sourceObj.getObjects()) do
+    --          local cardObj = sourceObj.takeObject({position = objPos})
+    --          cardObj.setGMNotes('1')
+    --        end
+    --     end
+    -- end
 
     -- if index == 6 then -- used to tag decks
     --   local sourceObj = Player[player_color].getHoverObject()
@@ -727,23 +770,35 @@ function onScriptingButtonDown(index, player_color)
     --       local objPos = sourceObj.getPosition()
     --        for _, card in ipairs(sourceObj.getObjects()) do
     --          local cardObj = sourceObj.takeObject({position = objPos})
-    --          cardObj.addTag("North")
+    --          cardObj.setGMNotes('2')
     --        end
     --     end
     -- end
 
-    if index == 7 then
-        for _, pTurns in pairs(Turns.order) do
-            print(pTurns)
-        end
-    end
+    -- if index == 7 then
+    --     local sourceObj = Player[player_color].getHoverObject()
+    --     if sourceObj.type == 'Deck' then
+    --       local objPos = sourceObj.getPosition()
+    --        for _, card in ipairs(sourceObj.getObjects()) do
+    --          local cardObj = sourceObj.takeObject({position = objPos})
+    --          cardObj.setGMNotes('3')
+    --        end
+    --     end
+    -- end
     
-    if index == 8 then
-        print(roundCounter)
-    end
+    -- if index == 8 then
+    --     local sourceObj = Player[player_color].getHoverObject()
+    --     if sourceObj.type == 'Deck' then
+    --       local objPos = sourceObj.getPosition()
+    --        for _, card in ipairs(sourceObj.getObjects()) do
+    --          local cardObj = sourceObj.takeObject({position = objPos})
+    --          cardObj.setGMNotes('4')
+    --        end
+    --     end
+    -- end
 
     if index == 9 then
-        testFunction()
+        moveTracker()
     end
 
 end

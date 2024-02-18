@@ -5,7 +5,7 @@ local tableTop = '4ee1f2'
 local gameBoard = 'c01d03'
 
 local goalBagGUID = 'a7e97b'
-local halftimeTruth = {}
+
 local spareDeckCube = 'd12877' -- Sunk into the table 
 local southDeckCubeMidgame = '474d06' -- Sunk into table
 local campSnapCube = 'd237ef' -- Sunk into table
@@ -18,13 +18,8 @@ local deckTags = {'westDeck', 'middleDeck', 'eastDeck'}
 local firstPlayerMarker = '03f05d'
 local roundTracker = 'f2b0a8'
 
---testing things
-
-
 local turnIndex = {'T1', 'T2', 'T3', 'halftime', 'T4', 'T5', 'T6'} -- 2-3 players
 local fourPlayerTurnIndex = {{'T1', 'T2', 'T3', 'T4', 'halftime', 'T5', 'T6', 'T7', 'T8'}}
-local twoPlayerBoard = '4d58f6'
-local fourPlayerCampBoard = 'cd64ca'
 
 local setupItems = {
     ["Red"] = {'7c9f52', '6c271c', 'c1452d', '34ec84', '1cef75', 'd7e46d', '6e0905', 'a96f81', '8074e0', '68f5e1', '79a08a', '8e0f7b'},
@@ -32,6 +27,11 @@ local setupItems = {
     ["Green"] = {'884f7c', 'adeb59', '41be25', '97f97a', '83466a', '490927', '73fd56', 'd744e8', 'fda133', '2d5ad6', '86ba44', '2515db'},
     ["Purple"] = {'870713', 'e0f5fc', 'f1468e', '873cf2', '6f50d9', 'c63d7c', '717760', '3ee73a', 'd8e49c', 'aef26e', '59d57e', '09fd42'},
 }
+
+local campBoardBag = 'd81846'
+local twoPlayerCampBoard = '84346f'
+local threePlayerCampBoard = '1ff4ec'
+local fourPlayerCampBoard = '32da80'
 
 local redScoringZone = '8e0f7b'
 local yellowScoringZone = 'afbbaa'
@@ -122,6 +122,52 @@ function setupGameButton()
     buttonHolderCube.createButton(setupButton)
 end
 
+function setupCampBoard()
+    local campBoardBagObj = getObjectFromGUID(campBoardBag)
+    local campBoardCubeObj = getObjectFromGUID(campSnapCube)
+    local campBoardPos = campBoardCubeObj.getPosition()
+
+    if #getSeatedPlayers() == 1 then
+        --solo mode needs done still
+    elseif #getSeatedPlayers() == 2 then
+        campBoardBagObj.takeObject({
+            position = campBoardPos + Vector(0, 2, 0),
+            guid = twoPlayerCampBoard,
+        })
+    elseif #getSeatedPlayers() == 3 then
+        campBoardBagObj.takeObject({
+            position = campBoardPos + Vector(0, 2, 0),
+            guid = threePlayerCampBoard,
+        })
+    else -- 4 players  
+        campBoardBagObj.takeObject({
+            position = campBoardPos + Vector(0, 2, 0),
+            guid = fourPlayerCampBoard,
+        })
+    end
+end
+
+function roundTrackerSetup()
+    local trackerPawn = getObjectFromGUID(roundTracker)
+    local campBoardCubeObj = getObjectFromGUID(campSnapCube)
+    local campBoardPos = campBoardCubeObj.getPosition() + Vector(0, 2, 0)
+    local campBoardObj = castAndCheckForTag(campBoardPos, 'campBoard')
+    local snappies = campBoardObj.getSnapPoints()
+
+    print(campBoardObj.guid)
+    if campBoardObj then
+        for _, snap in pairs(snappies) do -- iterate though all snaps on object
+            local oPosition = campBoardObj.positionToWorld(snap.position)
+            for _, snapTag in pairs(snap.tags) do  -- iterate though tags on each snap point 
+                if snapTag == 'T1' then
+                    trackerPawn.setPosition(oPosition + Vector(0, 2, 0))
+                    break
+                end
+            end
+        end
+    end
+end
+
 function gameSetup()
     local gameBoardObject = getObjectFromGUID(gameBoard)
     local spareDeckCubeObject = getObjectFromGUID(spareDeckCube) -- north deck
@@ -153,8 +199,9 @@ function gameSetup()
     local buttonHolderCube = getObjectFromGUID(startButtonCubeBlue)
     buttonHolderCube.destruct()
 
+    setupCampBoard()
     Wait.frames(function() goalTokens() end, 100)
-
+    Wait.frames(function() roundTrackerSetup() end, 100)
 
    -- removeButton()
 end
@@ -652,7 +699,7 @@ function onScriptingButtonDown(index, player_color)
     end
 
     if index == 3 then
-        simplifiedSetup()
+        roundTrackerSetup()
     end
 
     if index == 4 then

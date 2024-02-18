@@ -1,5 +1,5 @@
 turnCounter = 0
-roundCounter = 3
+roundCounter = 1
 
 local tableTop = '4ee1f2'
 local gameBoard = 'c01d03' -- main game board
@@ -41,12 +41,14 @@ local scoringZones = {
     ["Green"] = '2515db',
     ["Purple"] = '09fd42',
 }
+local firstPlayerTokenSpot ={
+    ["Red"] = 'c80dee',
+    ["Yellow"] = '1bd566',
+    ["Green"] = '084062',
+    ["Purple"] = 'e1cd1d',
+}
 
-local redScoringZone = '8e0f7b'
-local yellowScoringZone = 'afbbaa'
-local greenScoringZone = '2515db'
-local purpleScoringZone = '09fd42'
-
+-- none of the tokens use snap Points I just didn't feel like renaming this 
 local purplePathTokens = {
     {guid = '717760', snapPoint = {x = 27.78013, y = 1.588443, z = 26.30198}, rotation = {x = 0.0, y = 90, z = 0.0}},
     {guid = '3ee73a', snapPoint = {x = 27.78015, y = 1.588443, z = 27.86568}, rotation = {x = 0.0, y = 90, z = 0.0}},
@@ -104,7 +106,6 @@ function onPlayerTurn(player, previous_player)
     local buttonHolderCube = getObjectFromGUID(halftimeShowCube)
     if roundCounter ~= 4 then
         Wait.frames(function () restock() end, 75) -- refills any cards missing from the middle. 
-        print("we are in round " .. roundCounter)
     end
     turnCounter = turnCounter + 1 
 
@@ -112,8 +113,18 @@ function onPlayerTurn(player, previous_player)
         turnCounter = 0
     end
 
-    if turnCounter > 10 then 
-        Wait.frames(function() nextRound() end, 1) -- needed the wait here for the turn tracking to function properly
+    if #Player.getPlayers() == 2 then -- 10 turns per round
+        if turnCounter > 10 then
+            Wait.frames(function() nextRound() end, 1) -- needed the wait here for the turn tracking to function properly            
+        end
+    elseif #Player.getPlayers() == 3 then -- 15 turns per round
+        if turnCounter > 15 then
+            Wait.frames(function() nextRound() end, 1) -- needed the wait here for the turn tracking to function properly      
+        end
+    elseif #Player.getPlayers() >= 4 then -- 16 turns per round
+        if turnCounter > 16 then
+            Wait.frames(function() nextRound() end, 1) -- needed the wait here for the turn tracking to function properly      
+        end
     end
 end
 
@@ -230,10 +241,9 @@ function gameSetup()
     buttonHolderCube.destruct()
 
     setupCampBoard()
+    moveFirstPlayerMarker()
     Wait.frames(function() goalTokens() end, 100)
     Wait.frames(function() roundTrackerSetup() end, 100)
-
-   -- removeButton()
 end
 
 function halftimeShowButton()
@@ -305,6 +315,7 @@ function halftimeShow()
     returnPathTiles()
     roundCounter = roundCounter + 1
     moveTracker()
+    moveFirstPlayerMarker()
     Turns.turn_color = Turns.order[1]
     turnCounter = 1
     
@@ -388,46 +399,45 @@ function returnPathTiles()
 
 end
 
+function moveFirstPlayerMarker()
+    local firstPlayerObj = getObjectFromGUID(firstPlayerMarker)
+    local firstPlayerColor = Turns.order[1]
+    local firstPlayerHolder = getObjectFromGUID(firstPlayerTokenSpot[firstPlayerColor]) -- cube where marker should be
+    local firstPlayerMarkerPos = firstPlayerHolder.getPosition() + Vector(0, 2, 0)
+    local hasMarker = castAndCheckForTag(firstPlayerMarkerPos, 'First')
+
+    if not hasMarker then
+        firstPlayerObj.setPositionSmooth(firstPlayerMarkerPos, false, true)
+        if firstPlayerColor == 'Red' or firstPlayerColor =='Yellow' then
+            firstPlayerObj.setRotationSmooth(Vector(0,270,0))
+        elseif firstPlayerColor == 'Purple' or firstPlayerColor == 'Green' then
+            firstPlayerObj.setRotationSmooth(Vector(0,90,0))
+        end
+    end
+end
+
 function nextRound()
     -- Reset turn counter at the start of each round
     turnCounter = 0
-
     roundCounter = roundCounter + 1
     moveTracker()
 
-
-    -- Move object from first player to next player in turn order
-    local objectGuid = "03f05d"
     local firstPlayer = Turns.order[1]
-    local nextPlayerIndex = 2  -- Index of the next player in turn order
 
     -- If there is only one player, just return
     if #Turns.order < 2 then
         return
     end
 
-    -- Move the object from the first player to the next player
-    local firstPlayerHand = Player[firstPlayer].getHandObjects()
-    for _, obj in ipairs(firstPlayerHand) do
-        if obj.getGUID() == objectGuid then
-            obj.deal(1, Turns.order[nextPlayerIndex])
-            break
-        end
-    end
+
 
     -- Adjust the turn order for the new round
     local newTurnOrder = {}
-    -- if roundCounter == 5 then
-    --     for i = 2, #Turns.order do
-    --         table.insert(newTurnOrder, halftimeTruth[i])
-    --     end
-    --     table.insert(newTurnOrder, halftimeTruth[1])
-    -- else 
-        for i = 2, #Turns.order do
-            table.insert(newTurnOrder, Turns.order[i])
-        end
-        table.insert(newTurnOrder, firstPlayer)
-    -- end
+    for i = 2, #Turns.order do
+        table.insert(newTurnOrder, Turns.order[i])
+    end
+    table.insert(newTurnOrder, firstPlayer)
+
     -- Set the new turn order
     Turns.order = newTurnOrder
 
@@ -435,11 +445,13 @@ function nextRound()
     Turns.enable = true
     Turns.turn_color = Turns.order[1]
 
-    if roundCounter ~= 4 then
+    if roundCounter ~= 4 and #Player.getPlayers() < 4 then
         returnPathTiles()    
+    elseif roundCounter ~= 5 and #Player.getPlayers() >= 4 then
+        returnPathTiles()
     end
-
-
+    
+    moveFirstPlayerMarker()
     print("Round Complete")
 end
 
@@ -560,13 +572,6 @@ function randomizeTurnOrderAndEnableTurns()
     -- Enable turn for the first player
     Turns.enable = true
     broadcastToAll(playerColors[1] .. " Is the first player", Pink)
-
-    -- Draw object into the hand of the first player
-    local objectGuid = "03f05d"
-    local playerHand = Player[firstPlayerColor].getHandObjects()
-    if playerHand == nil or #playerHand == 0 then
-        getObjectFromGUID(objectGuid).deal(1, firstPlayerColor)
-    end
 end
 
 function simplifiedSetup()
@@ -753,27 +758,13 @@ function onScriptingButtonDown(index, player_color)
          end
     end
 
-    -- if index == 5 then
-    --     local sourceObj = Player[player_color].getHoverObject()
-    --     if sourceObj.type == 'Deck' then
-    --       local objPos = sourceObj.getPosition()
-    --        for _, card in ipairs(sourceObj.getObjects()) do
-    --          local cardObj = sourceObj.takeObject({position = objPos})
-    --          cardObj.setGMNotes('1')
-    --        end
-    --     end
-    -- end
+    if index == 5 then
+        moveFirstPlayerMarker()
+    end
 
-    -- if index == 6 then -- used to tag decks
-    --   local sourceObj = Player[player_color].getHoverObject()
-    --     if sourceObj.type == 'Deck' then
-    --       local objPos = sourceObj.getPosition()
-    --        for _, card in ipairs(sourceObj.getObjects()) do
-    --          local cardObj = sourceObj.takeObject({position = objPos})
-    --          cardObj.setGMNotes('2')
-    --        end
-    --     end
-    -- end
+    if index == 6 then -- used to tag decks
+        print(turnCounter)
+    end
 
     -- if index == 7 then
     --     local sourceObj = Player[player_color].getHoverObject()

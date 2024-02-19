@@ -1,5 +1,5 @@
 turnCounter = 0
-roundCounter = 1
+roundCounter = 1 
 local draftIndex = 1 -- used to keep track of how many drats in the advanced setup
 
 local tableTop = '4ee1f2'
@@ -7,11 +7,12 @@ local gameBoard = 'c01d03' -- main game board
 
 local goalBagGUID = 'a7e97b' -- bag with goal tokens
 
-local spareDeckCube = 'd12877' -- Sunk into the table 
+local spareDeckCube = 'd12877' -- Sunk into the table. North Deck is here
 local southDeckCubeMidgame = '474d06' -- Sunk into table
 local campSnapCube = 'd237ef' -- Sunk into table
 local halftimeShowCube = '54ec5b' -- sunk into table
 local startButtonCubeBlue = '18c30d' -- sunk into table
+local advancedSetupCube = '8b4889'
 local scoreButtonBlock = '80959c'-- holds a score calc button. block is sunk into table
 local scorebuttonblock2 = '226dac' -- holds a score calc button. block is sunk into table
 
@@ -36,6 +37,7 @@ local twoPlayerCampBoard = '84346f'
 local threePlayerCampBoard = '1ff4ec'
 local fourPlayerCampBoard = '32da80'
 
+-- these are sunk into the table. used to spawn buttons for advanced setup
 local r1DraftCube = '93db82'
 local r2DraftCube = '61f052'
 local r3DraftCube = 'ed691d'
@@ -92,13 +94,29 @@ local questionTokens = {
 
 function onPlayerChangeColor()
     local buttonHolderCube = getObjectFromGUID(startButtonCubeBlue)
-    buttonHolderCube.editButton({label = "Set Up A \n" .. #Player.getPlayers() .. " Player Game"})
+    local advancedButtonHolder = getObjectFromGUID(advancedSetupCube)
+    buttonHolderCube.editButton({label = "Simple Set Up\n" .. #Player.getPlayers() .. " Player Game"})
+    advancedButtonHolder.editButton({label = "Advanced Setup \n" .. #Player.getPlayers() .. " Player Game"})
 end
 
 function onLoad()
+    local gameBoardObject = getObjectFromGUID(gameBoard)
+    local spareDeckCubeObject = getObjectFromGUID(spareDeckCube) -- north deck
+
+    local northDeck = getDeck(spareDeckCubeObject, 'North')
+    local westDeck = getDeck(gameBoardObject, 'westDeck')
+    local southDeck = getDeck(gameBoardObject, 'middleDeck')
+    local eastDeck = getDeck(gameBoardObject, 'eastDeck')
+
+    northDeck.shuffle()
+    southDeck.shuffle()
+    westDeck.shuffle()
+    eastDeck.shuffle()
+
     setupGameButton()
     scoreButton()
-
+    advancedSetupButton()
+    
     local purpleBoard = getObjectFromGUID('59d57e')
     local redBoard = getObjectFromGUID('79a08a')
     local greenBoard = getObjectFromGUID('86ba44')
@@ -111,13 +129,20 @@ end
 
 function onPlayerTurn(player, previous_player)
     local buttonHolderCube = getObjectFromGUID(halftimeShowCube)
+    local r1ButtonHolder = getObjectFromGUID(r1DraftCube)
     if roundCounter ~= 4 then
         Wait.frames(function () restock() end, 75) -- refills any cards missing from the middle. 
     end
     turnCounter = turnCounter + 1 
 
-    if buttonHolderCube and roundCounter == 4 then
+    if buttonHolderCube and roundCounter == 4 and #Player.getPlayers() < 4 then -- this logic prevents players from fucking up turn order in the halftime part of the game by passing
         turnCounter = 0
+    elseif buttonHolderCube and roundCounter == 5 and #Player.getPlayers() == 4 then
+        turnCounter = 0
+    end
+
+    if r1ButtonHolder and roundCounter == 1 then -- stops players from messing up turn order by passing in the draft phase. 
+        turnCounter = 1
     end
 
     if #Player.getPlayers() == 2 then -- 10 turns per round
@@ -135,18 +160,18 @@ function onPlayerTurn(player, previous_player)
     end
 end
 
-function setupGameButton()
+function setupGameButton() -- Simple setup
     local buttonHolderCube = getObjectFromGUID(startButtonCubeBlue)
-    local setupButton = {click_function = "gameSetup", 
+    local setupButton = {click_function = "simplifiedSetup", 
                         function_owner = self, 
-                        label = "Set Up A \n" .. #Player.getPlayers() .. " Player Game", 
+                        label = "Simple Set Up\n" .. #Player.getPlayers() .. " Player Game", 
                         position = {0, 1, 0}, 
                         rotation = {0, 180, 0}, 
                         scale = {0.5, 0.5, 0.5}, 
                         width = 5000, 
                         height = 3000, 
-                        font_size = 600, 
-                        tooltip = "Set Up Game"}
+                        font_size = 1000, 
+                        tooltip = "Simplified game setup"}
     buttonHolderCube.createButton(setupButton)
 end
 
@@ -168,6 +193,98 @@ function scoreButton()
                         tooltip = "Prints all players current scores to chat"}
     buttonHolderCube.createButton(setupButton)
     buttonHolderCube2.createButton(setupButton)
+end
+
+function scoreCalc()
+    local players = Player.getPlayers()
+    local colorsInUse = {}
+    local campBoardCubeObj = getObjectFromGUID(campSnapCube) -- cube under table with snap point
+    local campBoardPos = campBoardCubeObj.getPosition() + Vector(0, 2, 0)
+    local campBoardObj = castAndCheckForTag(campBoardPos, 'campBoard')
+    local snappies = campBoardObj.getSnapPoints()
+    
+    -- Determine colors chosen by players
+    for _, player in ipairs(players) do
+        local color = player.color
+        colorsInUse[color] = player.steam_name
+    end
+
+    for color, zoneGUID in pairs(scoringZones) do
+        if colorsInUse[color] then
+            local playerName = colorsInUse[color]
+            playerScore = 0
+            playerZone = getObjectFromGUID(zoneGUID)
+            if playerZone ~= nil then
+                allCards = playerZone.getObjects()
+                for _, thing in ipairs(allCards) do 
+                    if thing.tag == 'Card' then
+                        local cardPointValue = tonumber(thing.getGMNotes())
+                        if cardPointValue ~= nil then
+                            playerScore = playerScore + cardPointValue
+                        end
+                    elseif thing.type =='Deck' then -- no cards should be stacked as a deck, but if your players are stupid this still scores things. 
+                        local objPos = thing.getPosition()
+                        
+                        for _, card in ipairs(thing.getObjects()) do
+                            local cardObj = thing.takeObject({position = objPos})
+                            local cardPointValue = tonumber(cardObj.getGMNotes())
+                            playerScore = playerScore + cardPointValue
+                        end
+                    end
+                end
+
+                -- Calculates the value of the goal tokens on the campfire board
+                for _, point in pairs(snappies) do
+                    local oPosition = campBoardObj.positionToWorld(point.position)
+                    local hitObject = castAndCheckForTag(oPosition, color)
+                    if hitObject then
+                        local tokenValue = tonumber(hitObject.getGMNotes())
+                        playerScore = playerScore + tokenValue
+                    end
+                end
+
+                printToAll(playerName .. " has " .. playerScore .. " points", {1, 1, 1})
+            else
+                printToAll("Zone for " .. playerName .. " not found", {1, 0, 0})
+            end
+        end
+    end
+end
+
+function advancedSetupButton()
+    local advancedButtonHolder = getObjectFromGUID(advancedSetupCube)
+    local advancedButton = {click_function = "advancedSetup", 
+                        function_owner = self, 
+                        label = "Advanced Setup \n" .. #Player.getPlayers() .. " Player Game", 
+                        position = {0, 1, 0}, 
+                        rotation = {0, 180, 0}, 
+                        scale = {0.5, 0.5, 0.5}, 
+                        width = 5200,
+                        height = 3000,
+                        color = {r=1,g=1,b=1},
+                        font_size = 700, 
+                        tooltip = "Click this to do the advanced setup of the game. Simple is recommended for your first play"}
+    advancedButtonHolder.createButton(advancedButton)
+end
+
+function advancedSetup()
+    local r1ButtonHolder = getObjectFromGUID(r1DraftCube)
+    local r2ButtonHolder = getObjectFromGUID(r2DraftCube)
+    local r3ButtonHolder = getObjectFromGUID(r3DraftCube)
+    local r4ButtonHolder = getObjectFromGUID(r4DraftCube)
+
+    cardDraftButtonR1()
+    cardDraftButtonR2()
+    cardDraftButtonR3()
+    cardDraftButtonR4()
+
+    gameSetup()
+
+    r1ButtonHolder.editButton({color = Turns.order[draftIndex]})
+    r2ButtonHolder.editButton({color = Turns.order[draftIndex]})
+    r3ButtonHolder.editButton({color = Turns.order[draftIndex]})
+    r4ButtonHolder.editButton({color = Turns.order[draftIndex]})
+
 end
 
 function cardDraft(tag)
@@ -288,21 +405,49 @@ end
 function handleR1Draft()
     cardDraft('R1')
     Wait.frames(function() restock() end, 5)
+
+    if draftIndex > #Player.getPlayers() then -- this sets the person who was selected as first back to first if anyone passes in the draft phase. Also resets the turn counter to 1
+        if Turns.turn_color ~= Turns.order then
+            Turns.turn_color = Turns.order[1]
+            turnCounter = 1
+        end
+    end
 end
 
 function handleR2Draft()
     cardDraft('R2')
     Wait.frames(function() restock() end, 5)
+
+    if draftIndex > #Player.getPlayers() then -- this sets the person who was selected as first back to first if anyone passes in the draft phase. Also resets the turn counter to 1
+        if Turns.turn_color ~= Turns.order then
+            Turns.turn_color = Turns.order[1]
+            turnCounter = 1
+        end
+    end
 end
 
 function handleR3Draft()
     cardDraft('R3')
     Wait.frames(function() restock() end, 5)
+
+    if draftIndex > #Player.getPlayers() then -- this sets the person who was selected as first back to first if anyone passes in the draft phase. Also resets the turn counter to 1
+        if Turns.turn_color ~= Turns.order then
+            Turns.turn_color = Turns.order[1]
+            turnCounter = 1
+        end
+    end
 end
 
 function handleR4Draft()
     cardDraft('R4')
     Wait.frames(function() restock() end, 5)
+
+    if draftIndex > #Player.getPlayers() then -- this sets the person who was selected as first back to first if anyone passes in the draft phase. Also resets the turn counter to 1
+        if Turns.turn_color ~= Turns.order then
+            Turns.turn_color = Turns.order[1]
+            turnCounter = 1
+        end
+    end
 end
 
 function setupCampBoard()
@@ -351,52 +496,24 @@ function roundTrackerSetup()
 end
 
 function gameSetup()
-    local gameBoardObject = getObjectFromGUID(gameBoard)
-    local spareDeckCubeObject = getObjectFromGUID(spareDeckCube) -- north deck
-
-    local northDeck = getDeck(spareDeckCubeObject, 'North')
-    local westDeck = getDeck(gameBoardObject, 'westDeck')
-    local southDeck = getDeck(gameBoardObject, 'middleDeck')
-    local eastDeck = getDeck(gameBoardObject, 'eastDeck')
-
-    northDeck.shuffle()
-    southDeck.shuffle()
-    westDeck.shuffle()
-    eastDeck.shuffle()
-
-    cardDraftButtonR1()
-    cardDraftButtonR2()
-    cardDraftButtonR3()
-    cardDraftButtonR4()
-
     if #getSeatedPlayers() == 1 then
         Wait.time(function () restock() end, 0.7)
-        print('Solo Mode Baybeee')
+        broadcastToAll('Solo mode not currently scripted')
 
     elseif #getSeatedPlayers() < 4 then
         Wait.time(function () restock() end, 0.7)
-
         randomizeTurnOrderAndEnableTurns()
-
-        local firstPlayerColor = Turns.order[1]
-        local r1ButtonHolder = getObjectFromGUID(r1DraftCube)
-        local r2ButtonHolder = getObjectFromGUID(r2DraftCube)
-        local r3ButtonHolder = getObjectFromGUID(r3DraftCube)
-        local r4ButtonHolder = getObjectFromGUID(r4DraftCube)
-
-        r1ButtonHolder.editButton({color = firstPlayerColor})
-        r2ButtonHolder.editButton({color = firstPlayerColor})
-        r3ButtonHolder.editButton({color = firstPlayerColor})
-        r4ButtonHolder.editButton({color = firstPlayerColor})
-
     else
         Wait.time(function () restock() end, 0.7)
         fourPlayerChanges()
         randomizeTurnOrderAndEnableTurns()
     end
     removeSetupItems() -- Destorys unused assets
+
     local buttonHolderCube = getObjectFromGUID(startButtonCubeBlue)
+    local advancedButtonHolder = getObjectFromGUID(advancedSetupCube)
     buttonHolderCube.destruct()
+    advancedButtonHolder.destruct()
 
     setupCampBoard()
     moveFirstPlayerMarker()
@@ -435,7 +552,6 @@ function halftimeShow()
     local buttonHolderCube = getObjectFromGUID(halftimeShowCube)
     buttonHolderCube.destruct()
 
-
     for _, point in pairs(gameBoardSnaps) do 
         local oPosition = gameBoardObject.positionToWorld(point.position)
         local hitObject = castAndCheckForTag(oPosition, 'South')
@@ -462,7 +578,7 @@ function halftimeShow()
             end
         end
     end
-    --Wait.frames(function() print("delay") end, 200)
+
     -- Place North deck in the position of the South deck
     if northDeck then
         northDeck.setPosition(southDeckPosition) -- Place North deck where South deck was
@@ -476,40 +592,6 @@ function halftimeShow()
     moveFirstPlayerMarker()
     Turns.turn_color = Turns.order[1]
     turnCounter = 1
-    
-end
-
-function scoreCalc()
-    local players = Player.getPlayers()
-    local colorsInUse = {}
-    
-    -- Determine colors chosen by players
-    for _, player in ipairs(players) do
-        local color = player.color
-        colorsInUse[color] = player.steam_name
-    end
-
-    for color, zoneGUID in pairs(scoringZones) do
-        if colorsInUse[color] then
-            local playerName = colorsInUse[color]
-            playerScore = 0
-            playerZone = getObjectFromGUID(zoneGUID)
-            if playerZone ~= nil then
-                allCards = playerZone.getObjects()
-                for _, thing in ipairs(allCards) do 
-                    if thing.tag == 'Card' then
-                        local cardPointValue = tonumber(thing.getGMNotes())
-                        if cardPointValue ~= nil then
-                            playerScore = playerScore + cardPointValue
-                        end
-                    end
-                end
-                printToAll(playerName .. " has " .. playerScore .. " points", {1, 1, 1})
-            else
-                printToAll("Zone for " .. playerName .. " not found", {1, 0, 0})
-            end
-        end
-    end
 end
 
 function returnPathTiles()
@@ -741,11 +823,14 @@ function simplifiedSetup()
     local southDeck = getDeck(gameBoardObject, 'middleDeck')
     local eastDeck = getDeck(gameBoardObject, 'eastDeck')
 
-    for _, player in ipairs(getSeatedPlayers()) do 
-        northDeck.deal(1)
-        westDeck.deal(1)
-        southDeck.deal(2)
-        eastDeck.deal(1)
+    gameSetup()
+
+    for _, player in ipairs(getSeatedPlayers()) do
+        print(player)
+        northDeck.deal(1, player)
+        westDeck.deal(1, player)
+        southDeck.deal(2, player)
+        eastDeck.deal(1, player)
     end
 
 end
@@ -920,11 +1005,12 @@ function onScriptingButtonDown(index, player_color)
     end
 
     if index == 5 then
-        local firstPlayerColor = Turns.order[1]
-        print(firstPlayerColor)
+        local buttonCube = getObjectFromGUID(startButtonCubeBlue)
+        buttonCube.setPosition(Vector(0,10,0))
+        
     end
 
-    if index == 6 then -- used to tag decks
+    if index == 6 then
         print(turnCounter)
     end
 

@@ -16,6 +16,9 @@ local advancedSetupCube = '8b4889'
 local scoreButtonBlock = '80959c'-- holds a score calc button. block is sunk into table
 local scorebuttonblock2 = '226dac' -- holds a score calc button. block is sunk into table
 
+local setupText = '45a3fa'
+
+
 local cardTags = {"West", "North", "South", "East"} 
 local deckTags = {'westDeck', 'middleDeck', 'eastDeck'}
 
@@ -224,7 +227,7 @@ function scoreCalc()
                         end
                     elseif thing.type =='Deck' then -- no cards should be stacked as a deck, but if your players are stupid this still scores things. 
                         local objPos = thing.getPosition()
-                        
+
                         for _, card in ipairs(thing.getObjects()) do
                             local cardObj = thing.takeObject({position = objPos})
                             local cardPointValue = tonumber(cardObj.getGMNotes())
@@ -272,7 +275,7 @@ function advancedSetup()
     local r2ButtonHolder = getObjectFromGUID(r2DraftCube)
     local r3ButtonHolder = getObjectFromGUID(r3DraftCube)
     local r4ButtonHolder = getObjectFromGUID(r4DraftCube)
-
+    local helperTextObj = getObjectFromGUID(setupText)
     cardDraftButtonR1()
     cardDraftButtonR2()
     cardDraftButtonR3()
@@ -285,6 +288,7 @@ function advancedSetup()
     r3ButtonHolder.editButton({color = Turns.order[draftIndex]})
     r4ButtonHolder.editButton({color = Turns.order[draftIndex]})
 
+    helperTextObj.destruct()
 end
 
 function cardDraft(tag)
@@ -817,12 +821,14 @@ end
 function simplifiedSetup()
     local gameBoardObject = getObjectFromGUID(gameBoard)
     local spareDeckCubeObject = getObjectFromGUID(spareDeckCube) -- north deck
+    local helperTextObj = getObjectFromGUID(setupText)
 
     local northDeck = getDeck(spareDeckCubeObject, 'North')
     local westDeck = getDeck(gameBoardObject, 'westDeck')
     local southDeck = getDeck(gameBoardObject, 'middleDeck')
     local eastDeck = getDeck(gameBoardObject, 'eastDeck')
 
+    helperTextObj.destruct()
     gameSetup()
 
     for _, player in ipairs(getSeatedPlayers()) do

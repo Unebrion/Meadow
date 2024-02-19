@@ -1,5 +1,6 @@
 turnCounter = 0
 roundCounter = 1
+local draftIndex = 1 -- used to keep track of how many drats in the advanced setup
 
 local tableTop = '4ee1f2'
 local gameBoard = 'c01d03' -- main game board
@@ -34,6 +35,11 @@ local campBoardBag = 'd81846'
 local twoPlayerCampBoard = '84346f'
 local threePlayerCampBoard = '1ff4ec'
 local fourPlayerCampBoard = '32da80'
+
+local r1DraftCube = '93db82'
+local r2DraftCube = '61f052'
+local r3DraftCube = 'ed691d'
+local r4DraftCube = '63eb3a'
 
 local scoringZones = {
     ["Red"] = '8e0f7b',
@@ -86,12 +92,13 @@ local questionTokens = {
 
 function onPlayerChangeColor()
     local buttonHolderCube = getObjectFromGUID(startButtonCubeBlue)
-    buttonHolderCube.editButton({label = "Set Up A " .. #Player.getPlayers() .. " Player Game"})
+    buttonHolderCube.editButton({label = "Set Up A \n" .. #Player.getPlayers() .. " Player Game"})
 end
 
 function onLoad()
     setupGameButton()
     scoreButton()
+
     local purpleBoard = getObjectFromGUID('59d57e')
     local redBoard = getObjectFromGUID('79a08a')
     local greenBoard = getObjectFromGUID('86ba44')
@@ -163,6 +170,141 @@ function scoreButton()
     buttonHolderCube2.createButton(setupButton)
 end
 
+function cardDraft(tag)
+    local gameBoardObject = getObjectFromGUID(gameBoard)
+    local snappies = gameBoardObject.getSnapPoints()
+    local currentColor = Turns.order[draftIndex]
+    local spareDeckCubeObject = getObjectFromGUID(spareDeckCube) -- north deck
+    local northDeck = getDeck(spareDeckCubeObject, 'North')
+
+
+    local r1ButtonHolder = getObjectFromGUID(r1DraftCube)
+    local r2ButtonHolder = getObjectFromGUID(r2DraftCube)
+    local r3ButtonHolder = getObjectFromGUID(r3DraftCube)
+    local r4ButtonHolder = getObjectFromGUID(r4DraftCube)
+
+        for _, point in pairs(snappies) do
+            local oPosition = gameBoardObject.positionToWorld(point.position)
+            for _, label in pairs (point.tags) do
+                if label == tag then
+                    local card = nil
+                    local hitlist = Physics.cast({
+                        origin = (Vector(oPosition) + Vector(0,-2,0)),
+                        direction = {0,1,0},
+                        max_distance = 3,
+                        type = 1, -- Ray
+                        debug = true,
+                    })
+                
+                    for _, v in pairs(hitlist) do
+                        if v.hit_object.type == 'Card' then
+                            card = v.hit_object
+                        end
+                    end
+                    card.deal(1, currentColor)
+                end
+            end
+        end
+        northDeck.deal(1, currentColor)
+        draftIndex = draftIndex + 1
+        currentColor = Turns.order[draftIndex]
+        r1ButtonHolder.editButton({color = currentColor})
+        r2ButtonHolder.editButton({color = currentColor})
+        r3ButtonHolder.editButton({color = currentColor})
+        r4ButtonHolder.editButton({color = currentColor})
+
+        if draftIndex > #Player.getPlayers() then
+            r1ButtonHolder.destruct()
+            r2ButtonHolder.destruct()
+            r3ButtonHolder.destruct()
+            r4ButtonHolder.destruct()
+        end
+end
+
+function cardDraftButtonR1()
+    local r1ButtonHolder = getObjectFromGUID(r1DraftCube)
+    local r1Draft = {click_function = "handleR1Draft", 
+                        function_owner = self, 
+                        label = "Row 1", 
+                        position = {0, 1, 0}, 
+                        rotation = {0, 180, 0}, 
+                        scale = {0.5, 0.5, 0.5}, 
+                        width = 3000,
+                        height = 1500,
+                        color = {r=1,g=1,b=1},
+                        font_size = 5000, 
+                        tooltip = "Click this to draft this row of cards"}
+        r1ButtonHolder.createButton(r1Draft)
+end
+
+function cardDraftButtonR2()
+    local r2ButtonHolder = getObjectFromGUID(r2DraftCube)
+    local r2Draft = {click_function = "handleR2Draft", 
+                        function_owner = self, 
+                        label = "Row 2", 
+                        position = {0, 1, 0}, 
+                        rotation = {0, 180, 0}, 
+                        scale = {0.5, 0.5, 0.5}, 
+                        width = 3000,
+                        height = 1500,
+                        color = {r=1,g=1,b=1},
+                        font_size = 5000, 
+                        tooltip = "Click this to draft this row of cards"}
+        r2ButtonHolder.createButton(r2Draft)
+end
+
+function cardDraftButtonR3()
+    local r3ButtonHolder = getObjectFromGUID(r3DraftCube)
+    local r3Draft = {click_function = "handleR3Draft", 
+                        function_owner = self, 
+                        label = "Row 3", 
+                        position = {0, 1, 0}, 
+                        rotation = {0, 180, 0}, 
+                        scale = {0.5, 0.5, 0.5}, 
+                        width = 3000,
+                        height = 1500,
+                        color = {r=1,g=1,b=1},
+                        font_size = 5000, 
+                        tooltip = "Click this to draft this row of cards"}
+        r3ButtonHolder.createButton(r3Draft)
+end
+
+function cardDraftButtonR4()
+    local r4ButtonHolder = getObjectFromGUID(r4DraftCube)
+    local r4Draft = {click_function = "handleR4Draft", 
+                        function_owner = self, 
+                        label = "Row 4", 
+                        position = {0, 1, 0}, 
+                        rotation = {0, 180, 0}, 
+                        scale = {0.5, 0.5, 0.5}, 
+                        width = 3000,
+                        height = 1500,
+                        color = {r=1,g=1,b=1},
+                        font_size = 5000, 
+                        tooltip = "Click this to draft this row of cards"}
+        r4ButtonHolder.createButton(r4Draft)
+end
+
+function handleR1Draft()
+    cardDraft('R1')
+    Wait.frames(function() restock() end, 5)
+end
+
+function handleR2Draft()
+    cardDraft('R2')
+    Wait.frames(function() restock() end, 5)
+end
+
+function handleR3Draft()
+    cardDraft('R3')
+    Wait.frames(function() restock() end, 5)
+end
+
+function handleR4Draft()
+    cardDraft('R4')
+    Wait.frames(function() restock() end, 5)
+end
+
 function setupCampBoard()
     local campBoardBagObj = getObjectFromGUID(campBoardBag)
     local campBoardCubeObj = getObjectFromGUID(campSnapCube)
@@ -195,7 +337,6 @@ function roundTrackerSetup()
     local campBoardObj = castAndCheckForTag(campBoardPos, 'campBoard')
     local snappies = campBoardObj.getSnapPoints()
 
-    print(campBoardObj.guid)
     if campBoardObj then
         for _, snap in pairs(snappies) do -- iterate though all snaps on object
             local oPosition = campBoardObj.positionToWorld(snap.position)
@@ -223,6 +364,11 @@ function gameSetup()
     westDeck.shuffle()
     eastDeck.shuffle()
 
+    cardDraftButtonR1()
+    cardDraftButtonR2()
+    cardDraftButtonR3()
+    cardDraftButtonR4()
+
     if #getSeatedPlayers() == 1 then
         Wait.time(function () restock() end, 0.7)
         print('Solo Mode Baybeee')
@@ -231,6 +377,18 @@ function gameSetup()
         Wait.time(function () restock() end, 0.7)
 
         randomizeTurnOrderAndEnableTurns()
+
+        local firstPlayerColor = Turns.order[1]
+        local r1ButtonHolder = getObjectFromGUID(r1DraftCube)
+        local r2ButtonHolder = getObjectFromGUID(r2DraftCube)
+        local r3ButtonHolder = getObjectFromGUID(r3DraftCube)
+        local r4ButtonHolder = getObjectFromGUID(r4DraftCube)
+
+        r1ButtonHolder.editButton({color = firstPlayerColor})
+        r2ButtonHolder.editButton({color = firstPlayerColor})
+        r3ButtonHolder.editButton({color = firstPlayerColor})
+        r4ButtonHolder.editButton({color = firstPlayerColor})
+
     else
         Wait.time(function () restock() end, 0.7)
         fourPlayerChanges()
@@ -740,7 +898,10 @@ function onScriptingButtonDown(index, player_color)
     end
 
     if index == 3 then
-        scoreCalc()
+        cardDraftButtonR1()
+        cardDraftButtonR2()
+        cardDraftButtonR3()
+        cardDraftButtonR4()
     end
 
     if index == 4 then
@@ -759,7 +920,8 @@ function onScriptingButtonDown(index, player_color)
     end
 
     if index == 5 then
-        moveFirstPlayerMarker()
+        local firstPlayerColor = Turns.order[1]
+        print(firstPlayerColor)
     end
 
     if index == 6 then -- used to tag decks

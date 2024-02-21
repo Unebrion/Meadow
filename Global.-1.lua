@@ -6,6 +6,7 @@ local tableTop = '4ee1f2'
 local gameBoard = 'c01d03' -- main game board
 
 local goalBagGUID = 'a7e97b' -- bag with goal tokens
+local blockerTokens = '559cd6'
 
 local spareDeckCube = 'd12877' -- Sunk into the table. North Deck is here
 local southDeckCubeMidgame = '474d06' -- Sunk into table
@@ -17,7 +18,8 @@ local scoreButtonBlock = '80959c'-- holds a score calc button. block is sunk int
 local scorebuttonblock2 = '226dac' -- holds a score calc button. block is sunk into table
 
 local setupText = '45a3fa'
-
+local twoPlayerBlockZone = 'b0e123'
+local threePlayerBlockZone = '3dddf5'
 
 local cardTags = {"West", "North", "South", "East"} 
 local deckTags = {'westDeck', 'middleDeck', 'eastDeck'}
@@ -161,6 +163,20 @@ function onPlayerTurn(player, previous_player)
             Wait.frames(function() nextRound() end, 1) -- needed the wait here for the turn tracking to function properly      
         end
     end
+end
+
+function onObjectEnterZone(zone, object)
+
+    if zone.guid == twoPlayerBlockZone or zone.guid == threePlayerBlockZone then
+        if object.hasTag('Path') then
+            Wait.frames(function() object.setPosition(Vector(-4.26, 1.07, 10.84)) end, 75)
+            local msg = "That spot is not available in a " .. #Player.getPlayers() .. " player game"
+            Wait.frames(function() broadcastToAll(msg) end, 75)
+            Wait.frames(function() object.highlightOn("Red", 3) end, 75)
+            Wait.frames(function() Player[Turns.turn_color].pingTable(Vector(-4.26, 1.07, 10.84)) end, 75)
+        end
+    end
+
 end
 
 function setupGameButton() -- Simple setup
@@ -314,7 +330,7 @@ function cardDraft(tag)
                         direction = {0,1,0},
                         max_distance = 3,
                         type = 1, -- Ray
-                        debug = true,
+                        debug = false,
                     })
                 
                     for _, v in pairs(hitlist) do
@@ -462,21 +478,25 @@ function setupCampBoard()
     if #getSeatedPlayers() == 1 then
         --solo mode needs done still
     elseif #getSeatedPlayers() == 2 then
-        campBoardBagObj.takeObject({
+        local board = campBoardBagObj.takeObject({
             position = campBoardPos + Vector(0, 2, 0),
             guid = twoPlayerCampBoard,
         })
+        Wait.frames(function() board.lock() end, 100)
     elseif #getSeatedPlayers() == 3 then
-        campBoardBagObj.takeObject({
+        local board = campBoardBagObj.takeObject({
             position = campBoardPos + Vector(0, 2, 0),
             guid = threePlayerCampBoard,
         })
+        Wait.frames(function() board.lock() end, 100)
     else -- 4 players  
-        campBoardBagObj.takeObject({
+        local board = campBoardBagObj.takeObject({
             position = campBoardPos + Vector(0, 2, 0),
             guid = fourPlayerCampBoard,
         })
+        Wait.frames(function() board.lock() end, 100)
     end
+    setBlockers()
 end
 
 function roundTrackerSetup()
@@ -772,7 +792,7 @@ function castUp(guid, tags)
         direction = {0, 1, 0},
         max_distance = 4,
         type = 1, -- Ray
-        debug = true,
+        debug = false,
     })
 
     if type(tags) == "string" then
@@ -884,7 +904,7 @@ function castOnly(position)
         direction = {0,1,0}, 
         max_distance = 3,
         type = 1, -- Ray
-        debug = true,
+        debug = false,
     })
 
     for _, v in pairs(hitlist) do
@@ -900,7 +920,7 @@ function castAndCheckForTag(position, tag)
         direction = {0,1,0}, 
         max_distance = 3,
         type = 1, -- Ray
-        debug = true,
+        debug = false,
     })
   
     if type(tag) == "string" then
@@ -972,132 +992,31 @@ function getDeck(obj, tag)
     return nil
 end
 
-function onScriptingButtonDown(index, player_color)
-    local currentPlayer = Player.getPlayers()[1]
-    local selectedObject = currentPlayer.getSelectedObjects()
+function setBlockers()
+    blockerBag = getObjectFromGUID(blockerTokens)
 
-    if index == 1 then
-        local sourceObj = Player[player_color].getHoverObject()
-       -- print(sourceObj.getGUID())
-        log(sourceObj.getRotation())
-    end
+    if #Player.getPlayers() == 3 then
 
-    if index == 2 then 
-      local sourceObj = Player[player_color].getHoverObject()
-      print(sourceObj.getPosition())
-      log(sourceObj.getPosition())
-    end
+        local blocker = blockerBag.takeObject({
+            position = Vector(-5.566, 1, 25.527),
+            rotation = Vector(0.03, 66.8, 0),
+        })
+        local twoPlayerZone = getObjectFromGUID(twoPlayerBlockZone)
+        twoPlayerZone.destruct()
+        blocker.lock()
 
-    if index == 3 then
-        cardDraftButtonR1()
-        cardDraftButtonR2()
-        cardDraftButtonR3()
-        cardDraftButtonR4()
-    end
+    elseif #Player.getPlayers() == 2 then
 
-    if index == 4 then
-         -- Get the GUID of the object that triggered the event
-         local sourceObj = Player[player_color].getHoverObject() 
-         if sourceObj then
-             local guid = sourceObj.getGUID()
-             if guid then
-                 -- Append the GUID to the notebook tab
-                 local notebook = self.getNotebookTabs()[1] -- Accessing the first (and only) notebook tab
-                 local notebookText = notebook.body
-                 notebookText = notebookText .. "\n" .. guid
-                 notebook.body = notebookText
-             end
-         end
-    end
+       local blocker1 = blockerBag.takeObject({
+            position = Vector(-5.566, 1, 25.527),
+            rotation = Vector(0.03, 66.8, 0),
+        })
 
-    if index == 5 then
-        local buttonCube = getObjectFromGUID(startButtonCubeBlue)
-        buttonCube.setPosition(Vector(0,10,0))
-        
-    end
-
-    if index == 6 then
-        print(turnCounter)
-    end
-
-    -- if index == 7 then
-    --     local sourceObj = Player[player_color].getHoverObject()
-    --     if sourceObj.type == 'Deck' then
-    --       local objPos = sourceObj.getPosition()
-    --        for _, card in ipairs(sourceObj.getObjects()) do
-    --          local cardObj = sourceObj.takeObject({position = objPos})
-    --          cardObj.setGMNotes('3')
-    --        end
-    --     end
-    -- end
-    
-    -- if index == 8 then
-    --     local sourceObj = Player[player_color].getHoverObject()
-    --     if sourceObj.type == 'Deck' then
-    --       local objPos = sourceObj.getPosition()
-    --        for _, card in ipairs(sourceObj.getObjects()) do
-    --          local cardObj = sourceObj.takeObject({position = objPos})
-    --          cardObj.setGMNotes('4')
-    --        end
-    --     end
-    -- end
-
-    if index == 9 then
-        moveTracker()
-    end
-
-end
-
-function testFunction()
-   -- local object = getObjectFromGUID(gameBoard)
-    
-    print ("The current vlaue of roundCounter is: " .. turnCounter)
-    for _, pTurns in pairs(halftimeTruth) do
-        print(pTurns)
-    end
-end
-
-function printSnapTableContents(snapsTable)
-    if type(snapsTable) == "table" then
-        print("Snap table contents:")
-        for index, snap in ipairs(snapsTable) do
-            print("Snap #" .. index)
-            for key, value in pairs(snap) do
-                print(key, value)
-            end
-        end
-    else
-        print("Not a valid table.")
-    end
-end
-
--- function listPositions()
---     local board = getObjectFromGUID(gameBoard)
---     note = "pointData ={\n"
---     if board then
---         local points = board.getSnapPoints()
---         for _, point in ipairs(points) do
---            note = note .. tostring(point.position)
---            note = note .. ",\n"
---            print("Position:", point.position)
---         end
---         note = note .. "}"
---     else
---         print("Board not found.")
---     end
---     Notes.addNotebookTab({title="data", body=note, color="White"})
--- end
-
-function printSnapPointsLocations(obj)
-    local snapPoints = obj.getSnapPoints()
-    if snapPoints == nil then
-        print("No snap points found for the object.")
-        return
-    end
-
-    print("Snap points locations for object '" .. obj.getName() .. "':")
-    for _, snapPoint in ipairs(snapPoints) do
-        local worldPos = obj.positionToWorld(snapPoint.position, snapPoint.rotation)
-        print("Snap Point " .. snapPoint.index .. ": (" .. worldPos.x .. ", " .. worldPos.y .. ", " .. worldPos.z .. ")")
+        local blocker2 = blockerBag.takeObject({
+            position = Vector(-3.457, 1, 22.817),
+            rotation = Vector(0.05, 36.5, 0),
+        })
+        blocker1.lock()
+        blocker2.lock()
     end
 end

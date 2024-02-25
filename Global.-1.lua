@@ -1,5 +1,5 @@
 turnCounter = 0
-roundCounter = 1 
+roundCounter = 3
 local draftIndex = 1 -- used to keep track of how many drats in the advanced setup
 
 local tableTop = '4ee1f2'
@@ -135,8 +135,10 @@ end
 function onPlayerTurn(player, previous_player)
     local buttonHolderCube = getObjectFromGUID(halftimeShowCube)
     local r1ButtonHolder = getObjectFromGUID(r1DraftCube)
-    if roundCounter ~= 4 then
-        Wait.frames(function () restock() end, 75) -- refills any cards missing from the middle. 
+    if roundCounter ~= 4 and #Player.getPlayers() < 4 then
+        restock()
+    elseif roundCounter ~= 5 and #Player.getPlayers() == 4 then
+        restock()
     end
     turnCounter = turnCounter + 1 
 
@@ -609,7 +611,8 @@ function halftimeShow()
     end
 
     -- Places north cards on the empty spaces
-    Wait.frames(function () restock() end, 50)
+    Wait.frames(function () restock() end, 50) -- need to wait here for west and east cards to get off the board
+
     returnPathTiles()
     roundCounter = roundCounter + 1
     moveTracker()
@@ -852,7 +855,6 @@ function simplifiedSetup()
     gameSetup()
 
     for _, player in ipairs(getSeatedPlayers()) do
-        print(player)
         northDeck.deal(1, player)
         westDeck.deal(1, player)
         southDeck.deal(2, player)
@@ -950,7 +952,7 @@ function restock()
         local cardDrawn = false
         if not castAndCheckForTag(oPosition, cardTags) then
             for _, value in pairs(point.tags) do
-                if value == 'West' then
+                if value == 'West' and not cardDrawn then
                         westDeck.takeObject({
                         position = oPosition,
                         flip = true,
@@ -962,7 +964,7 @@ function restock()
                         flip = true,
                     })
                     cardDrawn = true -- Set the flag to true after drawing a card
-                elseif value == 'East' then
+                elseif value == 'East' and not cardDrawn then
                         eastDeck.takeObject({
                         position = oPosition,
                         flip = true,
@@ -1018,5 +1020,23 @@ function setBlockers()
         })
         blocker1.lock()
         blocker2.lock()
+    end
+end
+
+function onScriptingButtonDown(index, player_color)
+
+        if index == 1 then
+            returnPathTiles()
+        end
+
+        if index == 5 then
+        local sourceObj = Player[player_color].getHoverObject()
+        if sourceObj.type == 'Deck' then
+          local objPos = sourceObj.getPosition()
+           for _, card in ipairs(sourceObj.getObjects()) do
+             local cardObj = sourceObj.takeObject({position = objPos})
+             cardObj.setGMNotes('0')
+           end
+        end
     end
 end

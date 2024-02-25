@@ -1,6 +1,7 @@
 turnCounter = 0
-roundCounter = 3
+roundCounter = 1
 local draftIndex = 1 -- used to keep track of how many drats in the advanced setup
+local advancedSetupFlag = false
 
 local tableTop = '4ee1f2'
 local gameBoard = 'c01d03' -- main game board
@@ -140,7 +141,7 @@ function onPlayerTurn(player, previous_player)
     elseif roundCounter ~= 5 and #Player.getPlayers() == 4 then
         restock()
     end
-    turnCounter = turnCounter + 1 
+    turnCounter = turnCounter + 1
 
     if buttonHolderCube and roundCounter == 4 and #Player.getPlayers() < 4 then -- this logic prevents players from fucking up turn order in the halftime part of the game by passing
         turnCounter = 0
@@ -148,7 +149,7 @@ function onPlayerTurn(player, previous_player)
         turnCounter = 0
     end
 
-    if r1ButtonHolder and roundCounter == 1 then -- stops players from messing up turn order by passing in the draft phase. 
+    if r1ButtonHolder and roundCounter == 1 and advancedSetupFlag == true then -- stops players from messing up turn order by passing in the draft phase. 
         turnCounter = 1
     end
 
@@ -294,6 +295,7 @@ function advancedSetup()
     local r3ButtonHolder = getObjectFromGUID(r3DraftCube)
     local r4ButtonHolder = getObjectFromGUID(r4DraftCube)
     local helperTextObj = getObjectFromGUID(setupText)
+    advancedSetupFlag = true
     cardDraftButtonR1()
     cardDraftButtonR2()
     cardDraftButtonR3()
@@ -1024,19 +1026,7 @@ function setBlockers()
 end
 
 function onScriptingButtonDown(index, player_color)
-
-        if index == 1 then
-            returnPathTiles()
-        end
-
-        if index == 5 then
-        local sourceObj = Player[player_color].getHoverObject()
-        if sourceObj.type == 'Deck' then
-          local objPos = sourceObj.getPosition()
-           for _, card in ipairs(sourceObj.getObjects()) do
-             local cardObj = sourceObj.takeObject({position = objPos})
-             cardObj.setGMNotes('0')
-           end
-        end
+    if index  == 1 then 
+        print(turnCounter)
     end
 end

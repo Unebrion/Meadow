@@ -1025,8 +1025,42 @@ function setBlockers()
     end
 end
 
+
+function addPromos()
+    local gameBoardObject = getObjectFromGUID(gameBoard)
+    local spareDeckCubeObject = getObjectFromGUID(spareDeckCube)
+    local northDeck = getDeck(spareDeckCubeObject, 'North')
+    local westDeck = getDeck(gameBoardObject, 'westDeck')
+    local southDeck = getDeck(gameBoardObject, 'middleDeck')
+    local eastDeck = getDeck(gameBoardObject, 'eastDeck')
+    local northDeckPos = northDeck.getPosition()
+    local southDeckPos = southDeck.getPosition()
+    local eastDeckPos = eastDeck.getPosition()
+    local westDeckPos = westDeck.getPosition()
+    local tempObj = getObjectFromGUID('2a954f')
+    local tempPos = tempObj.getPosition()
+    local tempDeck = tempObj.takeObject({position = tempPos + Vector(0,2,0)})
+    local tempDeckObj = getObjectFromGUID(tempDeck.guid)
+
+    for _, card in ipairs(tempDeckObj.getObjects()) do
+        for _, tag in pairs(card.tags) do
+            if tag == 'South' then
+                tempDeckObj.takeObject({position = southDeckPos, rotation = Vector(0,180,180)})
+            elseif tag == 'North' then
+                tempDeckObj.takeObject({position = northDeckPos, rotation = Vector(0,180,180)})
+            elseif tag == 'West' then
+                tempDeckObj.takeObject({position = westDeckPos, rotation = Vector(0,180,180)})
+            elseif tag == 'East' then
+                tempDeckObj.takeObject({position = eastDeckPos, rotation = Vector(0,180,180)})
+            end
+
+        end
+    end
+
+end
+
 function onScriptingButtonDown(index, player_color)
-    if index  == 1 then 
-        print(turnCounter)
+    if index == 3 then
+        addPromos()
     end
 end

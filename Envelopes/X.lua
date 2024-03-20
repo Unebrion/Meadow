@@ -1,7 +1,5 @@
 function onload()
-  print('dicks')
   makeButton()
-
 end
 
 function makeButton()

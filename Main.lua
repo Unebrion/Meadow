@@ -22,6 +22,9 @@ local setupText = '45a3fa'
 local twoPlayerBlockZone = 'b0e123'
 local threePlayerBlockZone = '3dddf5'
 
+local deerGoalToken = '3d97c9'
+local deerFlag = false
+
 local cardTags = {"West", "North", "South", "East"} 
 local deckTags = {'westDeck', 'middleDeck', 'eastDeck'}
 
@@ -300,7 +303,23 @@ function advancedSetup()
     cardDraftButtonR2()
     cardDraftButtonR3()
     cardDraftButtonR4()
+    addDeer()
 
+    local gameBoardObject = getObjectFromGUID(gameBoard)
+    local spareDeckCubeObject = getObjectFromGUID(spareDeckCube) -- north deck
+    local northDeck = getDeck(spareDeckCubeObject, 'North')
+    local westDeck = getDeck(gameBoardObject, 'westDeck')
+    local southDeck = getDeck(gameBoardObject, 'middleDeck')
+    local eastDeck = getDeck(gameBoardObject, 'eastDeck')
+
+    northDeck.shuffle()
+    westDeck.shuffle()
+    southDeck.shuffle()
+    eastDeck.shuffle()
+
+
+
+    
     gameSetup()
 
     r1ButtonHolder.editButton({color = Turns.order[draftIndex]})
@@ -524,6 +543,7 @@ function roundTrackerSetup()
 end
 
 function gameSetup()
+
     if #getSeatedPlayers() == 1 then
         Wait.time(function () restock() end, 0.7)
         broadcastToAll('Solo mode not currently scripted')
@@ -537,6 +557,7 @@ function gameSetup()
         randomizeTurnOrderAndEnableTurns()
     end
     removeSetupItems() -- Destorys unused assets
+    removeEnvelopes()
 
     local buttonHolderCube = getObjectFromGUID(startButtonCubeBlue)
     local advancedButtonHolder = getObjectFromGUID(advancedSetupCube)
@@ -773,6 +794,7 @@ function goalTokens()
     local campBoardObject = castUp(campSnapCube, 'campBoard')
     local campBoardSnaps = campBoardObject.getSnapPoints()
 
+
     goalTokenBag.shuffle()
 
     for _, point in pairs(campBoardSnaps) do 
@@ -853,6 +875,13 @@ function simplifiedSetup()
     local southDeck = getDeck(gameBoardObject, 'middleDeck')
     local eastDeck = getDeck(gameBoardObject, 'eastDeck')
 
+    northDeck.shuffle()
+    westDeck.shuffle()
+    southDeck.shuffle()
+    eastDeck.shuffle()
+    addDeer()
+
+
     helperTextObj.destruct()
     gameSetup()
 
@@ -900,6 +929,30 @@ function removeSetupItems()
             end
         end
     end
+end
+
+function removeEnvelopes()
+    local envelopes = {'900e95', '665fe1', '2c3984', '2a954f', '8e2be1', 'c6a3fa', 'da904c'}
+    for _, packet in pairs(envelopes) do 
+        local obj = getObjectFromGUID(packet)
+        if obj ~= nil then
+            obj.destruct()
+        end
+    end
+end
+
+function addDeer()
+    local goalTokenBag = getObjectFromGUID('a7e97b')
+    local deerGoal = getObjectFromGUID(deerGoalToken)
+    print(deerGoal.guid)
+    if deerFlag then
+
+        goalTokenBag.putObject(deerGoal)
+    end
+end
+
+function deerFlip()
+    deerFlag = true
 end
 
 function castOnly(position)
@@ -1025,7 +1078,6 @@ function setBlockers()
     end
 end
 
-
 function addPromos(obj)
     local gameBoardObject = getObjectFromGUID(gameBoard)
     local spareDeckCubeObject = getObjectFromGUID(spareDeckCube)
@@ -1061,17 +1113,24 @@ function addPromos(obj)
 
 end
 
-function getBoardAndDecks()
-    local gameBoardObject = getObjectFromGUID(gameBoard)
-    local spareDeckCubeObject = getObjectFromGUID(spareDeckCube)
-    local northDeck = getDeck(spareDeckCubeObject, 'North')
-    local westDeck = getDeck(gameBoardObject, 'westDeck')
-    local southDeck = getDeck(gameBoardObject, 'middleDeck')
-    local eastDeck = getDeck(gameBoardObject, 'eastDeck')
-end
+-- function getBoardAndDecks()
+--     local gameBoardObject = getObjectFromGUID(gameBoard)
+--     local spareDeckCubeObject = getObjectFromGUID(spareDeckCube)
+--     local northDeck = getDeck(spareDeckCubeObject, 'North')
+--     local westDeck = getDeck(gameBoardObject, 'westDeck')
+--     local southDeck = getDeck(gameBoardObject, 'middleDeck')
+--     local eastDeck = getDeck(gameBoardObject, 'eastDeck')
+-- end
 
-function onScriptingButtonDown(index, player_color)
-    if index == 3 then
-        addPromos()
-    end
-end
+-- function onScriptingButtonDown(index, player_color)
+--     if index == 3 then
+--         addPromos()
+--     end
+
+--     if index == 4 then
+--         removeEnvelopes()
+--     end
+--     if index == 5 then 
+--         addDeer()
+--     end
+-- end

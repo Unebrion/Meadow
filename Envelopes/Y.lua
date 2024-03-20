@@ -25,5 +25,5 @@ function promoHelper()
   else  
     print('Cards have already been added.')
   end
-
+  Global.call("deerFlip")
 end

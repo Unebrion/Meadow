@@ -2,5 +2,9 @@
     "Lua.diagnostics.globals": [
         "returnPathTiles",
         "turnCounter"
+    ],
+    "Lua.diagnostics.disable": [
+        "lowercase-global",
+        "need-check-nil"
     ]
 }

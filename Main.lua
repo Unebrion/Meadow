@@ -123,7 +123,7 @@ function onLoad()
     eastDeck.shuffle()
 
     setupGameButton()
-    scoreButton()
+    --scoreButton()
     advancedSetupButton()
     
     local purpleBoard = getObjectFromGUID('59d57e')

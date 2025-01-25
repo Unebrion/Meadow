@@ -944,7 +944,6 @@ end
 function addDeer()
     local goalTokenBag = getObjectFromGUID('a7e97b')
     local deerGoal = getObjectFromGUID(deerGoalToken)
-    print(deerGoal.guid)
     if deerFlag then
 
         goalTokenBag.putObject(deerGoal)
